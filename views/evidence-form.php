@@ -9,7 +9,7 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Buat Evidence Baru</h1>
+    <div class="sp-page-title">Buat Evidence Baru</div>
   </div>
   <a class="sp-btn-secondary" href="<?php echo esc_url(Url::page('my')); ?>">← Kembali</a>
 </div>
@@ -223,9 +223,26 @@ include __DIR__ . '/layout-open.php';
       syncRequired();
       return;
     }
+    const normalizeMultiline = (value) => String(value || '')
+      .replace(/<br\s*\/?\s*>/gi, '\n')
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\/n/g, '\n')
+      .replace(/\r\n?/g, '\n')
+      .replace(/\s+•\s+/g, '\n• ')
+      .trim();
+    const escapeHtml = (value) => String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
     metricQuestion.textContent = selectedOpt.dataset.question || '-';
-    metricPoints.textContent = selectedOpt.dataset.points || '-';
-    metricNote.textContent = selectedOpt.dataset.note || '-';
+    const pointsText = normalizeMultiline(selectedOpt.dataset.points);
+    const noteText = normalizeMultiline(selectedOpt.dataset.note);
+    metricPoints.innerHTML = pointsText ? escapeHtml(pointsText).replace(/\n/g, '<br>') : '-';
+    metricNote.innerHTML = noteText ? escapeHtml(noteText).replace(/\n/g, '<br>') : '-';
     metricInfo.style.display = '';
     syncRequired();
   }
