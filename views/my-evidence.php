@@ -9,7 +9,7 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Evidence Saya</h1>
+    <div class="sp-page-title">Evidence Saya</div>
     <p>Lihat dan kelola seluruh evidence yang pernah Anda ajukan. Akun: <strong><?php echo esc_html($email); ?></strong></p>
   </div>
   <a href="<?php echo esc_url(Url::page('new')); ?>" class="sp-btn-primary">+ Buat Evidence Baru</a>
