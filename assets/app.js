@@ -46,6 +46,14 @@
     document.querySelectorAll('table.sp-datatable').forEach(function(table){
       const headers = Array.from(table.querySelectorAll('thead th'));
       headers.forEach(function(th, idx){
+        th.classList.add('sp-sortable');
+        if (!th.querySelector('.sp-sort-indicator')) {
+          const icon = document.createElement('span');
+          icon.className = 'sp-sort-indicator';
+          icon.setAttribute('aria-hidden', 'true');
+          icon.textContent = '';
+          th.appendChild(icon);
+        }
         th.style.cursor = 'pointer';
         th.title = 'Klik untuk urutkan';
         th.addEventListener('click', function(){
