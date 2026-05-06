@@ -14,7 +14,7 @@ final class ApprovedEvidenceShortcode {
 
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login.</p>';
-    if (!Auth::isReviewer()) return '<p>Halaman ini hanya untuk reviewer.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
 
     Assets::enqueueOnce();
 

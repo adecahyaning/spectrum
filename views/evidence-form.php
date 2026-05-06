@@ -11,7 +11,6 @@ include __DIR__ . '/layout-open.php';
   <div class="sp-page-title-block">
     <div class="sp-page-title">Buat Evidence Baru</div>
   </div>
-  <a class="sp-btn-secondary" href="<?php echo esc_url(Url::page('my')); ?>">← Kembali</a>
 </div>
 
 <section class="sp-card">

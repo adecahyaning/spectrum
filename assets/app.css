@@ -218,6 +218,12 @@ table.sp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760p
 background:#f1f5f9;
 font-weight:600;
 }
+.sp-table th.sp-sortable{position:relative;padding-right:20px;}
+.sp-sort-indicator{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;color:#94a3b8;}
+.sp-table th[data-sort="asc"] .sp-sort-indicator{color:#0f172a;content:"↑";}
+.sp-table th[data-sort="asc"] .sp-sort-indicator::before{content:"↑";}
+.sp-table th[data-sort="desc"] .sp-sort-indicator::before{content:"↓";}
+.sp-table th .sp-sort-indicator::before{content:"↕";}
 .sp-action-form {
   margin: 0;
 }

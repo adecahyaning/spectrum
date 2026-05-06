@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) exit;
 final class MyEvidenceShortcode {
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login untuk melihat evidence Anda.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
     Assets::enqueueOnce();
 
     $user_id = Auth::userId();
