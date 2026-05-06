@@ -51,7 +51,7 @@
           const icon = document.createElement('span');
           icon.className = 'sp-sort-indicator';
           icon.setAttribute('aria-hidden', 'true');
-          icon.textContent = '↕';
+          icon.textContent = '';
           th.appendChild(icon);
         }
         th.style.cursor = 'pointer';
