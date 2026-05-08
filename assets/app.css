@@ -75,7 +75,7 @@ body {
 
 .sp-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px; align-items:flex-start !important;}
 .sp-page-header{display:flex;justify-content:space-between;align-items:center;gap:12px;}
-.sp-page-title-block h1{font-size:20px;font-weight:650;margin:0 0 3px 0;}
+.sp-page-title{font-size:20px;font-weight:650;margin:0 0 3px 0;font-family:"Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;}
 .sp-page-title-block p{font-size:13px;color:var(--sp-text-muted);margin:0;}
 .sp-card{background:var(--sp-card-bg);border-radius:var(--sp-radius-lg);box-shadow:var(--sp-shadow-soft);padding:18px;}
 .sp-box{border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fff;}
@@ -140,6 +140,10 @@ table.sp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760p
 .sp-form-actions{display:flex;gap:8px;margin-top:8px;}
 .sp-metric-box{border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#f9fafb;}
 .sp-metric-title{font-weight:600;margin-bottom:4px;}
+#sp-metric-points,
+#sp-metric-note{
+  white-space: pre-line;
+}
 
 .sp-kv{display:grid;grid-template-columns:160px 1fr;gap:8px;font-size:13px;}
 .sp-k{color:#6b7280;}
@@ -214,6 +218,12 @@ table.sp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760p
 background:#f1f5f9;
 font-weight:600;
 }
+.sp-table th.sp-sortable{position:relative;padding-right:20px;}
+.sp-sort-indicator{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;color:#94a3b8;}
+.sp-table th[data-sort="asc"] .sp-sort-indicator{color:#0f172a;content:"↑";}
+.sp-table th[data-sort="asc"] .sp-sort-indicator::before{content:"↑";}
+.sp-table th[data-sort="desc"] .sp-sort-indicator::before{content:"↓";}
+.sp-table th .sp-sort-indicator::before{content:"↕";}
 .sp-action-form {
   margin: 0;
 }
@@ -253,6 +263,8 @@ font-weight:600;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:14px;
 }
+.sp-chart-head{min-height:42px;}
+.sp-help-placeholder{visibility:hidden;}
 .sp-chart-wrap{
   position:relative;
   width:100%;

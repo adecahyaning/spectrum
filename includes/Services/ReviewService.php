@@ -4,6 +4,7 @@ namespace Spectrum\Evidence\Services;
 use Spectrum\Evidence\Core\Auth;
 use Spectrum\Evidence\Repositories\EvidenceRepository;
 use Spectrum\Evidence\Repositories\LogRepository;
+use Spectrum\Evidence\Repositories\ReviewerScopeRepository;
 
 if (!defined('ABSPATH')) exit;
 
@@ -18,6 +19,10 @@ final class ReviewService {
 
     $ev = EvidenceRepository::find($evidence_id);
     if (!$ev) return new \WP_Error('not_found', 'Evidence tidak ditemukan.');
+
+    if (!ReviewerScopeRepository::canReviewEvidence(Auth::userId(), $evidence_id)) {
+      return new \WP_Error('forbidden_scope', 'Evidence di luar reviewer scope Anda.');
+    }
 
     $old_status = $ev->status;
 
