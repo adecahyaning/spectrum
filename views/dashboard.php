@@ -173,11 +173,11 @@ $general_unit = $general_unit ?? array();
   }
 
   const FACULTY_MAP = {
-    FPI: ['EV', 'CV'],
+    FPI: ['EV', 'CV', 'MSU'],
     FTI: ['CE', 'EE', 'ME', 'LG'],
     FTEP: ['GP', 'GL', 'PE'],
-    FSIK: ['CS', 'CH'],
-    FEB: ['MN', 'EC'],
+    FSIK: ['CS', 'CH', 'AT'],
+    FEB: ['MN', 'EC', 'MMN'],
     FKD: ['IR', 'CO']
   };
 
