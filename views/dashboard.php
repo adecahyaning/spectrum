@@ -220,6 +220,16 @@ $general_unit = $general_unit ?? array();
     const approvedPct = rows.map(u => Number(u.approved_percent || 0));
     const noDataPct = rows.map(u => Number(u.no_data_percent || 0));
 
+    const chartWrap = unitCanvas.closest('.sp-chart-wrap');
+    if (chartWrap) {
+      const perRow = 28;
+      const base = 220;
+      const minHeight = 340;
+      const dynamicHeight = Math.max(minHeight, base + (labels.length * perRow));
+      chartWrap.style.height = dynamicHeight + 'px';
+      chartWrap.style.minHeight = dynamicHeight + 'px';
+    }
+
     if (unitChart) unitChart.destroy();
 
     unitChart = new Chart(unitCanvas, {
