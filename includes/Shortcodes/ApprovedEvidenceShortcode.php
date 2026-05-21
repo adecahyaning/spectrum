@@ -6,6 +6,7 @@ use Spectrum\Evidence\Core\Auth;
 use Spectrum\Evidence\Core\View;
 
 use Spectrum\Evidence\Repositories\ApprovedEvidenceRepository;
+use Spectrum\Evidence\Repositories\LogRepository;
 use Spectrum\Evidence\Services\ExportService;
 
 if (!defined('ABSPATH')) exit;
@@ -14,7 +15,7 @@ final class ApprovedEvidenceShortcode {
 
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login.</p>';
-    if (!Auth::isReviewer()) return '<p>Halaman ini hanya untuk reviewer.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
 
     Assets::enqueueOnce();
 
@@ -40,13 +41,14 @@ final class ApprovedEvidenceShortcode {
           'metric_question' => $r->metric_question ?? '',
           'judul_evidence' => $r->title ?? '',
           'number_evidence' => isset($r->numeric_value) ? $r->numeric_value : '',
+          'score' => self::extractScore((int)($r->id ?? 0)),
           'attachment_or_link' => $evidence_link ?: '',
           'ringkasan_evidence' => $r->summary ?? '',
         );
       }
       ExportService::outputCsv(
         'approved-evidence-' . date('Ymd-His') . '.csv',
-        array('sdg_number', 'metric_code', 'metric_title', 'metric_question', 'judul_evidence', 'number_evidence', 'attachment_or_link', 'ringkasan_evidence'),
+        array('sdg_number', 'metric_code', 'metric_title', 'metric_question', 'judul_evidence', 'number_evidence', 'score', 'attachment_or_link', 'ringkasan_evidence'),
         $export_rows
       );
     }
@@ -57,5 +59,17 @@ final class ApprovedEvidenceShortcode {
       'units' => ApprovedEvidenceRepository::distinctUnits(),
       'rows' => $rows,
     ));
+  }
+
+  private static function extractScore($evidence_id) {
+    if ($evidence_id <= 0) return '';
+    $logs = LogRepository::listByEvidence($evidence_id);
+    foreach ((array)$logs as $log) {
+      $notes = (string)($log->notes ?? '');
+      if (preg_match('/Score\s*:\s*(\d+)\s*\/\s*5/i', $notes, $m)) {
+        return $m[1] . '/5';
+      }
+    }
+    return '';
   }
 }

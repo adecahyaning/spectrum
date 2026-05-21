@@ -2,6 +2,7 @@
 namespace Spectrum\Evidence\Repositories;
 
 use Spectrum\Evidence\Core\Db;
+use Spectrum\Evidence\Core\Auth;
 
 if (!defined('ABSPATH')) exit;
 
@@ -128,6 +129,19 @@ final class EvidenceRepository {
     $em = Db::table('spectrum_evidence_metric');
     $m = Db::table('spectrum_metric');
 
+    $scopeJoin = '';
+    $scopeWhere = '';
+
+    if (Auth::isReviewer() && ReviewerScopeRepository::hasAnyScope(Auth::userId())) {
+      $scopeTable = Db::table('spectrum_reviewer_scope');
+      $reviewerId = (int)Auth::userId();
+      $scopeJoin = " LEFT JOIN {$scopeTable} s ON s.reviewer_id = {$reviewerId}
+        AND (s.unit_code IS NULL OR s.unit_code = '' OR s.unit_code = e.unit_code)
+        AND (s.metric_id IS NULL OR s.metric_id = em.metric_id)
+        AND (s.sdg_number IS NULL OR s.sdg_number = m.sdg_number) ";
+      $scopeWhere = " AND s.id IS NOT NULL";
+    }
+
     if ($status) {
       return $wpdb->get_results($wpdb->prepare(
         "SELECT e.id, e.unit_code, e.status, e.updated_at, e.created_at,
@@ -135,7 +149,8 @@ final class EvidenceRepository {
          FROM {$t} e
          LEFT JOIN {$em} em ON em.evidence_id = e.id
          LEFT JOIN {$m} m ON m.id = em.metric_id
-         WHERE e.status=%s
+         {$scopeJoin}
+         WHERE e.status=%s {$scopeWhere}
          ORDER BY e.updated_at DESC, e.created_at DESC",
         $status
       ));
@@ -147,7 +162,8 @@ final class EvidenceRepository {
        FROM {$t} e
        LEFT JOIN {$em} em ON em.evidence_id = e.id
        LEFT JOIN {$m} m ON m.id = em.metric_id
-       WHERE e.status='SUBMITTED'
+       {$scopeJoin}
+       WHERE e.status='SUBMITTED' {$scopeWhere}
        ORDER BY e.updated_at DESC, e.created_at DESC"
     );
   }

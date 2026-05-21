@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) exit;
 final class ReviewQueueShortcode {
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
     if (!Auth::isReviewer()) return '<p>Halaman ini hanya untuk reviewer.</p>';
     Assets::enqueueOnce();
 
