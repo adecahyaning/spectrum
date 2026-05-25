@@ -173,17 +173,17 @@ $general_unit = $general_unit ?? array();
   }
 
   const FACULTY_MAP = {
-    FPI: ['EV', 'CV'],
+    FPI: ['EV', 'CV', 'MSU'],
     FTI: ['CE', 'EE', 'ME', 'LG'],
     FTEP: ['GP', 'GL', 'PE'],
-    FSIK: ['CS', 'CH'],
-    FEB: ['MN', 'EC'],
+    FSIK: ['CS', 'CH', 'AT'],
+    FEB: ['MN', 'EC', 'MMN'],
     FKD: ['IR', 'CO']
   };
 
-  function buildFacultyRows(rows){
+  function withFacultyAggregate(rows){
     const list = Array.isArray(rows) ? rows.slice() : [];
-    const out = [];
+    const out = list.slice();
     Object.entries(FACULTY_MAP).forEach(([faculty, codes]) => {
       const members = list.filter(r => codes.includes(String(r.unit_code || '').toUpperCase()));
       if (!members.length) return;
