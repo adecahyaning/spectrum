@@ -20,6 +20,7 @@ final class MyEvidenceShortcode {
 
     $user_id = Auth::userId();
     $user = wp_get_current_user();
+    $unit_code = Auth::unitCode($user_id);
 
     $filters = array(
       'year' => isset($_GET['f_year']) ? (int)$_GET['f_year'] : (isset($_GET['year']) ? (int)$_GET['year'] : 0),
@@ -33,7 +34,7 @@ final class MyEvidenceShortcode {
       $filters['status'] = '';
     }
 
-    $rows = EvidenceRepository::findBySubmitterFiltered($user_id, $filters);
+    $rows = EvidenceRepository::findByUnitFiltered($unit_code, $filters);
     if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
       $export_rows = array();
       foreach ((array)$rows as $r) {
@@ -63,7 +64,7 @@ final class MyEvidenceShortcode {
       'notice' => Notices::get($user_id),
       'email'  => $user->user_email,
       'filters' => $filters,
-      'years' => EvidenceRepository::distinctYearsBySubmitter($user_id),
+      'years' => EvidenceRepository::distinctYearsByUnit($unit_code),
       'rows'   => $rows,
     ));
   }

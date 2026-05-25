@@ -83,12 +83,74 @@ final class EvidenceRepository {
     return $wpdb->get_results($sql);
   }
 
+  public static function findByUnitFiltered($unit_code, $filters = array()) {
+    global $wpdb;
+
+    $e  = self::table();
+    $em = Db::table('spectrum_evidence_metric');
+    $m  = Db::table('spectrum_metric');
+
+    $select_extra = '';
+    if (self::hasColumn('numeric_value')) {
+      $select_extra .= ', e.numeric_value';
+    }
+    if (self::hasColumn('attachment_id')) {
+      $select_extra .= ', e.attachment_id';
+    }
+
+    $where = "WHERE e.unit_code = %s";
+    $params = array((string)$unit_code);
+
+    if (!empty($filters['year'])) {
+      $where .= " AND e.year = %d";
+      $params[] = (int)$filters['year'];
+    }
+
+    if (!empty($filters['status'])) {
+      $where .= " AND e.status = %s";
+      $params[] = $filters['status'];
+    }
+
+    if (!empty($filters['sdg_number'])) {
+      $where .= " AND m.sdg_number = %d";
+      $params[] = (int)$filters['sdg_number'];
+    }
+
+    if (!empty($filters['keyword'])) {
+      $where .= " AND e.title LIKE %s";
+      $params[] = '%' . $wpdb->esc_like($filters['keyword']) . '%';
+    }
+
+    $sql = "
+      SELECT e.id, e.year, e.title, e.summary, e.status, e.unit_code, e.link_url, e.updated_at, e.created_at
+             {$select_extra},
+             m.sdg_number, m.metric_code, m.metric_title, m.metric_question
+      FROM {$e} e
+      LEFT JOIN {$em} em ON em.evidence_id = e.id
+      LEFT JOIN {$m}  m  ON m.id = em.metric_id
+      {$where}
+      ORDER BY e.updated_at DESC, e.created_at DESC
+    ";
+
+    $sql = $wpdb->prepare($sql, $params);
+    return $wpdb->get_results($sql);
+  }
+
   public static function distinctYearsBySubmitter($submitter_id) {
     global $wpdb;
     $t = self::table();
     return $wpdb->get_col($wpdb->prepare(
       "SELECT DISTINCT year FROM {$t} WHERE submitter_id = %d ORDER BY year DESC",
       (int)$submitter_id
+    ));
+  }
+
+  public static function distinctYearsByUnit($unit_code) {
+    global $wpdb;
+    $t = self::table();
+    return $wpdb->get_col($wpdb->prepare(
+      "SELECT DISTINCT year FROM {$t} WHERE unit_code = %s ORDER BY year DESC",
+      (string)$unit_code
     ));
   }
 

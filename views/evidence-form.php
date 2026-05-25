@@ -51,6 +51,19 @@ include __DIR__ . '/layout-open.php';
       </div>
     </div>
 
+    <?php if (!empty($is_admin)): ?>
+    <div class="sp-form-row">
+      <label class="sp-label">Target Fungsi/Unit (Admin) *</label>
+      <select name="target_unit_code" id="target_unit_code" class="sp-select">
+        <option value="">-- Pilih Fungsi/Unit --</option>
+        <?php foreach ((array)$target_units as $u): ?>
+          <option value="<?php echo esc_attr($u); ?>"><?php echo esc_html($u); ?></option>
+        <?php endforeach; ?>
+      </select>
+      <div class="sp-help">Jika diisi admin dan submit via tombol auto-approve, evidence akan masuk sebagai milik unit target.</div>
+    </div>
+    <?php endif; ?>
+
     <div class="sp-form-row" id="sp-sdg-row" style="display:none;">
       <label class="sp-label">Pilih SDG (untuk General) *</label>
       <select name="general_sdg" id="general_sdg" class="sp-select">
@@ -121,6 +134,9 @@ include __DIR__ . '/layout-open.php';
     <div class="sp-form-actions">
       <button type="submit" name="spectrum_action" value="draft" class="sp-btn-secondary">Simpan Draft</button>
       <button type="submit" name="spectrum_action" value="submit" class="sp-btn-primary">Submit</button>
+      <?php if (!empty($is_admin)): ?>
+      <button type="submit" name="spectrum_action" value="admin_submit_approved" class="sp-btn-primary">Submit Admin (Auto-Approve)</button>
+      <?php endif; ?>
     </div>
   </form>
 </section>
@@ -153,6 +169,8 @@ include __DIR__ . '/layout-open.php';
   const srcLinkWrap = document.querySelector('.sp-source-link');
   const srcFileWrap = document.querySelector('.sp-source-file');
   const sourceRadios = document.querySelectorAll('input[name="source_type"]');
+  const isAdmin = <?php echo !empty($is_admin) ? 'true' : 'false'; ?>;
+  const targetUnitSelect = document.getElementById('target_unit_code');
 
   function getMode(){
     const checked = document.querySelector('input[name="metric_mode"]:checked');
@@ -258,6 +276,20 @@ include __DIR__ . '/layout-open.php';
 
   form.addEventListener('submit', function(e){
     const mode = getMode();
+    const submitter = e.submitter;
+    const action = submitter ? submitter.value : '';
+    if (action === 'admin_submit_approved') {
+      if (mode !== 'MANDATORY') {
+        alert('Admin auto-approve hanya untuk kategori Mandatory.');
+        e.preventDefault();
+        return;
+      }
+      if (isAdmin && (!targetUnitSelect || !targetUnitSelect.value)) {
+        alert('Target fungsi/unit wajib dipilih.');
+        e.preventDefault();
+        return;
+      }
+    }
     if (mode === 'GENERAL' && !sdgSelect.value) {
       alert('Pilih SDG dulu untuk kategori General.');
       e.preventDefault();

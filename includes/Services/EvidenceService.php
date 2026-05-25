@@ -12,6 +12,7 @@ final class EvidenceService {
 
   public static function createOrUpdateFromPost($action) {
     $user_id = Auth::userId();
+    $is_admin = user_can($user_id, 'manage_options');
 
     $is_update   = !empty($_POST['evidence_id']);
     $evidence_id = $is_update ? (int)$_POST['evidence_id'] : 0;
@@ -25,8 +26,12 @@ final class EvidenceService {
       ? (float)$_POST['metric_number_value']
       : null;
 
-    $target_status = (strpos($action, 'submit') !== false) ? 'SUBMITTED' : 'DRAFT';
+    $is_admin_force_approved = ($action === 'admin_submit_approved') && $is_admin;
+    $target_status = $is_admin_force_approved ? 'APPROVED' : ((strpos($action, 'submit') !== false) ? 'SUBMITTED' : 'DRAFT');
     $unit_code = Auth::unitCode($user_id);
+    if ($is_admin_force_approved && !empty($_POST['target_unit_code'])) {
+      $unit_code = sanitize_text_field($_POST['target_unit_code']);
+    }
 
     $old = null;
     $old_status = null;
@@ -63,7 +68,8 @@ final class EvidenceService {
         'summary'       => $summary,
         'link_url'      => $link,
         'status'        => $target_status,
-        'submitted_at'  => ($target_status === 'SUBMITTED') ? $now : null,
+        'submitted_at'  => in_array($target_status, array('SUBMITTED', 'APPROVED'), true) ? $now : null,
+        'last_reviewed_at' => ($target_status === 'APPROVED') ? $now : null,
         'created_at'    => $now,
         'updated_at'    => $now,
       );
@@ -80,7 +86,8 @@ final class EvidenceService {
       if (!$insert_id) return new \WP_Error('db_insert_failed', 'Gagal menyimpan evidence ke database.');
 
       EvidenceMetricRepository::setSingleMetric($insert_id, $metric_id);
-      LogRepository::add($insert_id, $user_id, null, $target_status, 'Create evidence');
+      $log_note = $is_admin_force_approved ? ('Admin auto-approved for unit: ' . $unit_code) : 'Create evidence';
+      LogRepository::add($insert_id, $user_id, null, $target_status, $log_note);
 
       return $insert_id;
     }
@@ -92,7 +99,8 @@ final class EvidenceService {
       'summary'       => $summary,
       'link_url'      => $link,
       'status'        => $target_status,
-      'submitted_at'  => ($target_status === 'SUBMITTED') ? $now : null,
+      'submitted_at'  => in_array($target_status, array('SUBMITTED', 'APPROVED'), true) ? $now : null,
+      'last_reviewed_at' => ($target_status === 'APPROVED') ? $now : null,
       'updated_at'    => $now,
     );
 
