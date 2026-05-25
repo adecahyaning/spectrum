@@ -9,7 +9,7 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Evidence untuk Direview</h1>
+    <div class="sp-page-title">Evidence untuk Direview</div>
     <p>Daftar evidence dengan status <strong>SUBMITTED</strong>.</p>
   </div>
 </div>

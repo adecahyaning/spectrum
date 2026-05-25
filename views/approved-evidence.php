@@ -8,7 +8,7 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Approved Evidence</h1>
+    <div class="sp-page-title">Approved Evidence</div>
     <p>Daftar evidence yang sudah <strong>APPROVED</strong>. Gunakan filter Unit atau SDG.</p>
   </div>
 </div>
