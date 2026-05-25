@@ -15,7 +15,10 @@ final class ExportService {
     if (!$out) wp_die('Gagal membuat file CSV.');
     fputcsv($out, array_values((array)$headers));
     foreach ((array)$rows as $row) {
-      fputcsv($out, array_values((array)$row));
+      $normalized = array_map(function($value){
+        return preg_replace("/\r\n|\r|\n/u", '\\n', (string)$value);
+      }, array_values((array)$row));
+      fputcsv($out, $normalized);
     }
     fclose($out);
     exit;

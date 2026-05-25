@@ -22,4 +22,8 @@ final class Auth {
     $unit = get_user_meta($user_id, 'fungsi_slug', true);
     return $unit ? $unit : 'UNKNOWN';
   }
+
+  public static function isUnitKnown($user_id = 0) {
+    return self::unitCode($user_id) !== 'UNKNOWN';
+  }
 }

@@ -9,7 +9,7 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Detail Evidence</h1>
+    <div class="sp-page-title">Detail Evidence</div>
     <p>• Status: <span class="sp-pill"><?php echo esc_html($ev->status); ?></span></p>
   </div>
   <!-- <a class="sp-btn-secondary" href="<?php #echo esc_url(Url::page('my')); ?>">← Kembali</a> -->
