@@ -190,8 +190,8 @@ $general_unit = $general_unit ?? array();
       const requested = members.reduce((n, r) => n + Number(r.requested_total || 0), 0);
       const approved = members.reduce((n, r) => n + Number(r.approved_total || 0), 0);
       const noData = members.reduce((n, r) => n + Number(r.no_data_total || 0), 0);
-      out.unshift({
-        unit_code: faculty + ' (FAKULTAS)',
+      out.push({
+        unit_code: faculty,
         requested_total: requested,
         approved_total: approved,
         no_data_total: noData,
@@ -206,10 +206,11 @@ $general_unit = $general_unit ?? array();
   const unitFilter = document.getElementById('sp-unit-filter');
   let unitChart = null;
 
-  const displayUnitRows = withFacultyAggregate(unitRows);
+  const facultyRows = buildFacultyRows(unitRows);
+  const displayUnitRows = facultyRows.concat(unitRows || []);
 
   function getFilteredUnits(){
-    if (!unitFilter || unitFilter.value === 'ALL') return displayUnitRows;
+    if (!unitFilter || unitFilter.value === 'ALL') return facultyRows;
     return displayUnitRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
   }
 
