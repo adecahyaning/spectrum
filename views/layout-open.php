@@ -77,14 +77,12 @@ $active = isset($active) ? $active : '';
           </li>
           <?php endif; ?>
 
-          <?php if (Auth::isReviewer()) : ?>
           <li class="sp-sidebar-item">
             <a class="sp-sidebar-link <?php echo ($active==='approved'?'active':''); ?>"
                href="<?php echo esc_url(Url::page('approved')); ?>">
               <span class="sp-dot"></span>Approved Evidence
             </a>
           </li>
-          <?php endif; ?>
         </ul>
       </div>
     </aside>
