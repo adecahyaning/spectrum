@@ -17,7 +17,7 @@ $general_unit = $general_unit ?? array();
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Dashboard SPECTRUM</h1>
+    <div class="sp-page-title">Dashboard SPECTRUM</div>
     <p>Ringkasan progres pengumpulan evidence tahun <?php echo (int)$year; ?>.</p>
   </div>
 </div>
@@ -47,8 +47,10 @@ $general_unit = $general_unit ?? array();
 
   <div class="sp-dashboard-two-col" style="margin-top:14px;">
     <div class="sp-box">
-      <h3 style="margin:0 0 6px 0;">Progress per Unit</h3>
-      <div class="sp-help">Sumbu Y: Fungsi, sumbu X: persentase konfirmasi mandatory.</div>
+      <div class="sp-chart-head">
+        <h3 style="margin:0 0 6px 0;">Progress per Unit</h3>
+        <div class="sp-help">Sumbu Y: Fungsi, sumbu X: persentase konfirmasi mandatory.</div>
+      </div>
       <label style="font-size:12px;color:#334155;display:flex;align-items:center;gap:6px;">
         Filter Fungsi
         <select id="sp-unit-filter" class="sp-select" style="width:auto;min-width:180px;padding:4px 8px;">
@@ -61,8 +63,10 @@ $general_unit = $general_unit ?? array();
     </div>
 
     <div class="sp-box">
-      <h3 style="margin:0 0 6px 0;">Grafik Kontribusi Unit</h3>
-      <div class="sp-help">Sumbu Y: Fungsi, sumbu X: jumlah evidence GENERAL yang APPROVED.</div>
+      <div class="sp-chart-head">
+        <h3 style="margin:0 0 6px 0;">Grafik Kontribusi Unit</h3>
+        <div class="sp-help sp-help-placeholder">&nbsp;</div>
+      </div>
       <div class="sp-chart-wrap" style="margin-top:10px;">
         <canvas id="sp-unit-general-chart"></canvas>
       </div>
@@ -168,13 +172,46 @@ $general_unit = $general_unit ?? array();
     }
   }
 
+  const FACULTY_MAP = {
+    FPI: ['EV', 'CV'],
+    FTI: ['CE', 'EE', 'ME', 'LG'],
+    FTEP: ['GP', 'GL', 'PE'],
+    FSIK: ['CS', 'CH'],
+    FEB: ['MN', 'EC'],
+    FKD: ['IR', 'CO']
+  };
+
+  function buildFacultyRows(rows){
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    const out = [];
+    Object.entries(FACULTY_MAP).forEach(([faculty, codes]) => {
+      const members = list.filter(r => codes.includes(String(r.unit_code || '').toUpperCase()));
+      if (!members.length) return;
+      const requested = members.reduce((n, r) => n + Number(r.requested_total || 0), 0);
+      const approved = members.reduce((n, r) => n + Number(r.approved_total || 0), 0);
+      const noData = members.reduce((n, r) => n + Number(r.no_data_total || 0), 0);
+      out.push({
+        unit_code: faculty,
+        requested_total: requested,
+        approved_total: approved,
+        no_data_total: noData,
+        approved_percent: requested > 0 ? (approved / requested) * 100 : 0,
+        no_data_percent: requested > 0 ? (noData / requested) * 100 : 0
+      });
+    });
+    return out;
+  }
+
   const unitCanvas = document.getElementById('sp-unit-progress-chart');
   const unitFilter = document.getElementById('sp-unit-filter');
   let unitChart = null;
 
+  const facultyRows = buildFacultyRows(unitRows);
+  const displayUnitRows = facultyRows.concat(unitRows || []);
+
   function getFilteredUnits(){
-    if (!unitFilter || unitFilter.value === 'ALL') return unitRows;
-    return unitRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
+    if (!unitFilter || unitFilter.value === 'ALL') return facultyRows;
+    return displayUnitRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
   }
 
   function renderUnitChart(){
@@ -183,6 +220,16 @@ $general_unit = $general_unit ?? array();
     const labels = rows.map(u => u.unit_code || '—');
     const approvedPct = rows.map(u => Number(u.approved_percent || 0));
     const noDataPct = rows.map(u => Number(u.no_data_percent || 0));
+
+    const chartWrap = unitCanvas.closest('.sp-chart-wrap');
+    if (chartWrap) {
+      const perRow = 28;
+      const base = 220;
+      const minHeight = 340;
+      const dynamicHeight = Math.max(minHeight, base + (labels.length * perRow));
+      chartWrap.style.height = dynamicHeight + 'px';
+      chartWrap.style.minHeight = dynamicHeight + 'px';
+    }
 
     if (unitChart) unitChart.destroy();
 
@@ -236,7 +283,7 @@ $general_unit = $general_unit ?? array();
   }
 
   if (unitFilter) {
-    const uniqUnits = Array.from(new Set(unitRows.map(u => String(u.unit_code || '')).filter(Boolean)));
+    const uniqUnits = Array.from(new Set(displayUnitRows.map(u => String(u.unit_code || '')).filter(Boolean)));
     uniqUnits.forEach(code => {
       const opt = document.createElement('option');
       opt.value = code;

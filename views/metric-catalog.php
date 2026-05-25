@@ -9,7 +9,7 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>SDG &amp; Indikator THE</h1>
+    <div class="sp-page-title">SDG &amp; Indikator THE</div>
     <p>Daftar metrik aktif per tahun pelaporan, lengkap dengan pencarian dan filter SDG.</p>
   </div>
 </div>
