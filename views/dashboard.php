@@ -18,7 +18,6 @@ $general_unit = $general_unit ?? array();
 <div class="sp-page-header">
   <div class="sp-page-title-block">
     <div class="sp-page-title">Dashboard SPECTRUM</div>
-    <p>Ringkasan progres pengumpulan evidence tahun <?php echo (int)$year; ?>.</p>
   </div>
 </div>
 
@@ -31,17 +30,14 @@ $general_unit = $general_unit ?? array();
     <div class="sp-box sp-dashboard-stat">
       <div class="sp-dashboard-stat-label">Jumlah data dikonfirmasi</div>
       <div class="sp-dashboard-stat-value"><?php echo (int)$overview['confirmed_total']; ?></div>
-      <div class="sp-help">Termasuk APPROVED + NO Data (per metrik mandatory unik per fungsi).</div>
     </div>
     <div class="sp-box sp-dashboard-stat">
       <div class="sp-dashboard-stat-label">Proses Pengumpulan data</div>
       <div class="sp-dashboard-stat-value"><?php echo (int)$overview['percent']; ?>%</div>
-      <div class="sp-help">Jumlah data dikonfirmasi / Jumlah data yang diminta.</div>
     </div>
     <div class="sp-box sp-dashboard-stat">
       <div class="sp-dashboard-stat-label">Jumlah data belum dikonfirmasi</div>
       <div class="sp-dashboard-stat-value"><?php echo (int)$overview['submitted_total']; ?></div>
-      <div class="sp-help">Mandatory yang statusnya masih SUBMITTED.</div>
     </div>
   </div>
 
@@ -49,7 +45,6 @@ $general_unit = $general_unit ?? array();
     <div class="sp-box">
       <div class="sp-chart-head">
         <h3 style="margin:0 0 6px 0;">Progress per Unit</h3>
-        <div class="sp-help">Sumbu Y: Fungsi, sumbu X: persentase konfirmasi mandatory.</div>
       </div>
       <label style="font-size:12px;color:#334155;display:flex;align-items:center;gap:6px;">
         Filter Fungsi
@@ -64,7 +59,7 @@ $general_unit = $general_unit ?? array();
 
     <div class="sp-box">
       <div class="sp-chart-head">
-        <h3 style="margin:0 0 6px 0;">Grafik Kontribusi Unit</h3>
+        <h3 style="margin:0 0 6px 0;">Kontribusi Unit</h3>
         <div class="sp-help sp-help-placeholder">&nbsp;</div>
       </div>
       <div class="sp-chart-wrap" style="margin-top:10px;">
@@ -173,13 +168,16 @@ $general_unit = $general_unit ?? array();
   }
 
   const FACULTY_MAP = {
-    FPI: ['EV', 'CV'],
+    FKD: ['IR', 'CO'],
+    FPI: ['EV', 'CV', 'MSU'],
     FTI: ['CE', 'EE', 'ME', 'LG'],
     FTEP: ['GP', 'GL', 'PE'],
-    FSIK: ['CS', 'CH'],
-    FEB: ['MN', 'EC'],
-    FKD: ['IR', 'CO']
+    FSIK: ['CS', 'CH', 'AT'],
+    FEB: ['MN', 'EC', 'MMN']
   };
+
+  const DIRECTORATE_CODES = ['DIRDIK','DIRMAWA','DPPM','DIK','DKI','DKA','DPPA','DSMTI','SPI','SPM','HUKUM','RPMB'];
+  const PRODI_CODES = Object.values(FACULTY_MAP).flat();
 
   function buildFacultyRows(rows){
     const list = Array.isArray(rows) ? rows.slice() : [];
@@ -212,16 +210,26 @@ $general_unit = $general_unit ?? array();
     return out;
   }
 
+  function normalizeUnitRows(rows){
+    return Array.isArray(rows)
+      ? rows.map(r => ({ ...r, unit_code: String(r.unit_code || '').toUpperCase() }))
+      : [];
+  }
+
   const unitCanvas = document.getElementById('sp-unit-progress-chart');
   const unitFilter = document.getElementById('sp-unit-filter');
   let unitChart = null;
 
-  const facultyRows = buildFacultyRows(unitRows);
-  const displayUnitRows = facultyRows.concat(unitRows || []);
+  const normalizedUnitRows = normalizeUnitRows(unitRows);
+  const facultyRows = buildFacultyRows(normalizedUnitRows);
+  const prodiRows = normalizedUnitRows.filter(r => PRODI_CODES.includes(String(r.unit_code || '').toUpperCase()));
+  const directorateRows = normalizedUnitRows.filter(r => DIRECTORATE_CODES.includes(String(r.unit_code || '').toUpperCase()));
+  const defaultDisplayRows = facultyRows.concat(directorateRows);
+  const allDropdownRows = defaultDisplayRows.concat(prodiRows);
 
   function getFilteredUnits(){
-    if (!unitFilter || unitFilter.value === 'ALL') return facultyRows;
-    return displayUnitRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
+    if (!unitFilter || unitFilter.value === 'ALL') return defaultDisplayRows;
+    return allDropdownRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
   }
 
   function renderUnitChart(){
@@ -293,13 +301,30 @@ $general_unit = $general_unit ?? array();
   }
 
   if (unitFilter) {
-    const uniqUnits = Array.from(new Set(displayUnitRows.map(u => String(u.unit_code || '')).filter(Boolean)));
-    uniqUnits.forEach(code => {
+    unitFilter.innerHTML = '<option value="ALL">Semua Unit</option>';
+
+    const addGroup = (label, rows) => {
+      const group = document.createElement('optgroup');
+      group.label = label;
+      rows.forEach(row => {
+        const opt = document.createElement('option');
+        opt.value = row.unit_code;
+        opt.textContent = row.unit_code;
+        group.appendChild(opt);
+      });
+      unitFilter.appendChild(group);
+    };
+
+    addGroup('Direktorat/Fungsi', directorateRows);
+    addGroup('Fakultas', facultyRows);
+    addGroup('Prodi', prodiRows);
+
+    /*uniqUnits.forEach(code => {
       const opt = document.createElement('option');
       opt.value = code;
       opt.textContent = code;
       unitFilter.appendChild(opt);
-    });
+    });*/
     unitFilter.addEventListener('change', renderUnitChart);
   }
 
@@ -310,6 +335,16 @@ $general_unit = $general_unit ?? array();
     const facultyGeneralRows = buildFacultyGeneralRows(generalRows);
     const labels = facultyGeneralRows.map(u => u.unit_code || '—');
     const totals = facultyGeneralRows.map(u => Number(u.general_approved_total || 0));
+    const generalWrap = generalCanvas.closest('.sp-chart-wrap');
+    if (generalWrap) {
+      const perRow = 20;
+      const base = 120;
+      const minHeight = 220;
+      const dynamicHeight = Math.max(minHeight, base + (labels.length * perRow));
+      generalWrap.style.height = dynamicHeight + 'px';
+      generalWrap.style.minHeight = dynamicHeight + 'px';
+    }
+    const hasData = totals.some(v => Number(v) > 0);
 
     new Chart(generalCanvas, {
       type: 'bar',
@@ -335,7 +370,14 @@ $general_unit = $general_unit ?? array();
           }
         },
         scales: {
-          x: { beginAtZero: true, title: { display: true, text: 'Jumlah Evidence' }, grid: {display: false} },
+          x: {
+            beginAtZero: true,
+            min: 0,
+            max: hasData ? undefined : 10,
+            ticks: { stepSize: 1, precision: 0 },
+            title: { display: true, text: 'Jumlah Evidence' },
+            grid: {display: false}
+          },
           y: { ticks: { autoSkip: false }, grid: {display: false} }
         }
       }
