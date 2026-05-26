@@ -46,8 +46,10 @@ include __DIR__ . '/layout-open.php';
     <div class="sp-form-row">
       <label class="sp-label">Kategori *</label>
       <div style="display:flex;gap:18px;align-items:center;">
-        <label><input type="radio" name="metric_mode" value="MANDATORY" required checked> Mandatory</label>
+        <label><input type="radio" name="metric_mode" value="MANDATORY" required checked <?php echo !empty($is_admin) ? 'readonly' : ''; ?>> Mandatory</label>
+        <?php if (empty($is_admin)): ?>
         <label><input type="radio" name="metric_mode" value="GENERAL" required> General</label>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -144,6 +146,7 @@ include __DIR__ . '/layout-open.php';
 <script>
 (function(){
   const mandatory = <?php echo wp_json_encode(array_values((array)$mandatory_metrics)); ?>;
+  const adminMandatoryMap = <?php echo wp_json_encode((object)($admin_unit_mandatory_map ?? array())); ?>;
   const general = <?php echo wp_json_encode(array_values((array)$general_metrics)); ?>;
   const noDataIds = new Set(<?php echo wp_json_encode(array_values((array)$no_data_ids)); ?>.map(Number));
 
@@ -180,12 +183,26 @@ include __DIR__ . '/layout-open.php';
   function rebuildMetric() {
     const mode = getMode();
     metricSelect.innerHTML = '<option value="">-- Pilih Indikator --</option>';
+    metricSelect.disabled = false;
     noWrap.style.display = (mode === 'MANDATORY') ? '' : 'none';
     if (mode !== 'MANDATORY') noData.checked = false;
 
-    const items = mode === 'MANDATORY'
-      ? mandatory
-      : general.filter(m => String(m.sdg_number) === String(sdgSelect.value || ''));
+    let items = [];
+    if (isAdmin) {
+      const selectedYear = yearSelect ? String(yearSelect.value || '') : '';
+      const selectedUnit = targetUnitSelect ? String(targetUnitSelect.value || '') : '';
+      if (!selectedUnit) {
+        metricSelect.disabled = true;
+        onMetricChange();
+        return;
+      }
+      const key = `${selectedUnit}|${selectedYear}`;
+      items = Array.isArray(adminMandatoryMap[key]) ? adminMandatoryMap[key] : [];
+    } else {
+      items = mode === 'MANDATORY'
+        ? mandatory
+        : general.filter(m => String(m.sdg_number) === String(sdgSelect.value || ''));
+    }
 
     items.forEach(item => {
       const id = Number(item.metric_id || item.id);
@@ -265,6 +282,10 @@ include __DIR__ . '/layout-open.php';
   }
 
   modeEls.forEach(el => el.addEventListener('change', function(){
+    if (isAdmin) {
+      const mandatoryRadio = document.querySelector('input[name="metric_mode"][value="MANDATORY"]');
+      if (mandatoryRadio) mandatoryRadio.checked = true;
+    }
     sdgRow.style.display = (getMode() === 'GENERAL') ? '' : 'none';
     rebuildMetric();
   }));
@@ -304,10 +325,21 @@ include __DIR__ . '/layout-open.php';
 
   if (yearSelect) {
     yearSelect.addEventListener('change', function(){
+      if (isAdmin) {
+        rebuildMetric();
+        return;
+      }
       const url = new URL(window.location.href);
       url.searchParams.set('year', this.value);
       window.location.href = url.toString();
     });
+  }
+
+  if (isAdmin && targetUnitSelect) {
+    targetUnitSelect.addEventListener('change', rebuildMetric);
+    const generalRadio = document.querySelector('input[name="metric_mode"][value="GENERAL"]');
+    if (generalRadio) generalRadio.checked = false;
+    sdgRow.style.display = 'none';
   }
 })();
 </script>
