@@ -16,9 +16,11 @@ if (!defined('ABSPATH')) exit;
 final class EvidenceFormShortcode {
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login untuk mengisi evidence.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
     Assets::enqueueOnce();
 
     $user_id = Auth::userId();
+    $is_admin = user_can($user_id, 'manage_options');
     $unit_code = Auth::unitCode($user_id);
     $years = array_map('intval', (array)MetricRepository::activeYears());
     $selected_year = isset($_GET['year']) ? (int)$_GET['year'] : 0;
@@ -67,6 +69,8 @@ final class EvidenceFormShortcode {
       'mandatory_metrics' => $formatted_mandatory,
       'general_metrics' => $general_metrics,
       'no_data_ids' => array_map('intval', (array)$no_data_ids),
+      'is_admin' => $is_admin,
+      'target_units' => FunctionMetricAssignmentRepository::distinctUnitCodes(),
     ));
   }
 }

@@ -60,7 +60,18 @@ final class PostHandler {
     $year = isset($_POST['year']) ? (int)$_POST['year'] : 0;
     $metric_id = isset($_POST['metric_id']) ? (int)$_POST['metric_id'] : 0;
     $mode = isset($_POST['metric_mode']) ? sanitize_text_field($_POST['metric_mode']) : '';
+    $action = sanitize_text_field($_POST['spectrum_action']);
     $unit_code = Auth::unitCode($user_id);
+    $is_admin = user_can($user_id, 'manage_options');
+
+    if ($is_admin && $action === 'admin_submit_approved') {
+      $unit_code = isset($_POST['target_unit_code']) ? sanitize_text_field($_POST['target_unit_code']) : '';
+      $mode = 'MANDATORY';
+      if ($unit_code === '') {
+        Notices::set($user_id, 'error', 'Target fungsi/unit wajib dipilih oleh admin.');
+        self::redirectBack();
+      }
+    }
 
     if ($year <= 0 || $metric_id <= 0) {
       Notices::set($user_id, 'error', 'Tahun dan metrik wajib dipilih.');
@@ -103,7 +114,7 @@ final class PostHandler {
       exit;
     }
 
-    $action = sanitize_text_field($_POST['spectrum_action']); // draft|submit|update_submit|update_draft etc
+    // draft|submit|update_submit|update_draft|admin_submit_approved
 
     $result = EvidenceService::createOrUpdateFromPost($action);
 
