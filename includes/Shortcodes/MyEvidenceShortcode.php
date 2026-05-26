@@ -7,6 +7,7 @@ use Spectrum\Evidence\Core\Notices;
 use Spectrum\Evidence\Core\View;
 
 use Spectrum\Evidence\Repositories\EvidenceRepository;
+use Spectrum\Evidence\Repositories\LogRepository;
 use Spectrum\Evidence\Services\ExportService;
 
 if (!defined('ABSPATH')) exit;
@@ -14,10 +15,12 @@ if (!defined('ABSPATH')) exit;
 final class MyEvidenceShortcode {
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login untuk melihat evidence Anda.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
     Assets::enqueueOnce();
 
     $user_id = Auth::userId();
     $user = wp_get_current_user();
+    $unit_code = Auth::unitCode($user_id);
 
     $filters = array(
       'year' => isset($_GET['f_year']) ? (int)$_GET['f_year'] : (isset($_GET['year']) ? (int)$_GET['year'] : 0),
@@ -31,7 +34,7 @@ final class MyEvidenceShortcode {
       $filters['status'] = '';
     }
 
-    $rows = EvidenceRepository::findBySubmitterFiltered($user_id, $filters);
+    $rows = EvidenceRepository::findByUnitFiltered($unit_code, $filters);
     if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
       $export_rows = array();
       foreach ((array)$rows as $r) {
@@ -44,6 +47,7 @@ final class MyEvidenceShortcode {
           'metric_question' => $r->metric_question ?? '',
           'judul_evidence' => $r->title ?? '',
           'number_evidence' => isset($r->numeric_value) ? $r->numeric_value : '',
+          'score' => self::extractScore((int)($r->id ?? 0)),
           'attachment_or_link' => $evidence_link ?: '',
           'ringkasan_evidence' => $r->summary ?? '',
           'status' => $r->status ?? '',
@@ -51,7 +55,7 @@ final class MyEvidenceShortcode {
       }
       ExportService::outputCsv(
         'my-evidence-' . date('Ymd-His') . '.csv',
-        array('sdg_number', 'metric_code', 'metric_title', 'metric_question', 'judul_evidence', 'number_evidence', 'attachment_or_link', 'ringkasan_evidence', 'status'),
+        array('sdg_number', 'metric_code', 'metric_title', 'metric_question', 'judul_evidence', 'number_evidence', 'score', 'attachment_or_link', 'ringkasan_evidence', 'status'),
         $export_rows
       );
     }
@@ -60,8 +64,20 @@ final class MyEvidenceShortcode {
       'notice' => Notices::get($user_id),
       'email'  => $user->user_email,
       'filters' => $filters,
-      'years' => EvidenceRepository::distinctYearsBySubmitter($user_id),
+      'years' => EvidenceRepository::distinctYearsByUnit($unit_code),
       'rows'   => $rows,
     ));
+  }
+
+  private static function extractScore($evidence_id) {
+    if ($evidence_id <= 0) return '';
+    $logs = LogRepository::listByEvidence($evidence_id);
+    foreach ((array)$logs as $log) {
+      $notes = (string)($log->notes ?? '');
+      if (preg_match('/Score\s*:\s*(\d+)\s*\/\s*5/i', $notes, $m)) {
+        return $m[1] . '/5';
+      }
+    }
+    return '';
   }
 }
