@@ -70,7 +70,9 @@ $general_unit = $general_unit ?? array();
 
   <div class="sp-box" style="margin-top:14px;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-      <h3 style="margin:0;" class="sp-dashboard-chart-title">SDG Evidence Status</h3>
+      <div class="sp-chart-head" style="min-height:0;">
+        <h3 style="margin:0;">SDG Evidence Status</h3>
+      </div>
       <label style="font-size:12px;color:#334155;display:flex;align-items:center;gap:6px;">
         Filter Status
         <select id="sp-sdg-status-filter" class="sp-select" style="width:auto;min-width:140px;padding:4px 8px;">
@@ -232,6 +234,17 @@ $general_unit = $general_unit ?? array();
     return allDropdownRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
   }
 
+  function syncChartHeight(canvas, rowCount){
+    const chartWrap = canvas ? canvas.closest('.sp-chart-wrap') : null;
+    if (!chartWrap) return;
+    const perRow = 28;
+    const base = 220;
+    const minHeight = 340;
+    const dynamicHeight = Math.max(minHeight, base + (Number(rowCount || 0) * perRow));
+    chartWrap.style.height = dynamicHeight + 'px';
+    chartWrap.style.minHeight = dynamicHeight + 'px';
+  }
+
   function renderUnitChart(){
     if (!unitCanvas) return;
     const rows = getFilteredUnits();
@@ -239,15 +252,7 @@ $general_unit = $general_unit ?? array();
     const approvedPct = rows.map(u => Number(u.approved_percent || 0));
     const noDataPct = rows.map(u => Number(u.no_data_percent || 0));
 
-    const chartWrap = unitCanvas.closest('.sp-chart-wrap');
-    if (chartWrap) {
-      const perRow = 28;
-      const base = 220;
-      const minHeight = 340;
-      const dynamicHeight = Math.max(minHeight, base + (labels.length * perRow));
-      chartWrap.style.height = dynamicHeight + 'px';
-      chartWrap.style.minHeight = dynamicHeight + 'px';
-    }
+    syncChartHeight(unitCanvas, labels.length);
 
     if (unitChart) unitChart.destroy();
 
@@ -264,7 +269,7 @@ $general_unit = $general_unit ?? array();
             borderWidth: 1
           },
           {
-            label: 'No Data',
+            label: 'Not Available',
             data: noDataPct,
             backgroundColor: '#f97316',
             borderColor: '#ea580c',
@@ -287,7 +292,7 @@ $general_unit = $general_unit ?? array();
                 if (ctx.dataset.label === 'Approved Mandatory') {
                   return `Approved: ${Number(item.approved_percent || 0).toFixed(1)}% (${item.approved_total || 0}/${item.requested_total || 0})`;
                 }
-                return `No Data: ${Number(item.no_data_percent || 0).toFixed(1)}% (${item.no_data_total || 0}/${item.requested_total || 0})`;
+                return `Not Available: ${Number(item.no_data_percent || 0).toFixed(1)}% (${item.no_data_total || 0}/${item.requested_total || 0})`;
               }
             }
           }
@@ -333,18 +338,11 @@ $general_unit = $general_unit ?? array();
   const generalCanvas = document.getElementById('sp-unit-general-chart');
   if (generalCanvas) {
     const facultyGeneralRows = buildFacultyGeneralRows(generalRows);
-    const labels = facultyGeneralRows.map(u => u.unit_code || '—');
-    const totals = facultyGeneralRows.map(u => Number(u.general_approved_total || 0));
-    const generalWrap = generalCanvas.closest('.sp-chart-wrap');
-    if (generalWrap) {
-      const perRow = 20;
-      const base = 120;
-      const minHeight = 220;
-      const dynamicHeight = Math.max(minHeight, base + (labels.length * perRow));
-      generalWrap.style.height = dynamicHeight + 'px';
-      generalWrap.style.minHeight = dynamicHeight + 'px';
-    }
-    const hasData = totals.some(v => Number(v) > 0);
+    const hasData = facultyGeneralRows.some(u => Number(u.general_approved_total || 0) > 0);
+    const visibleGeneralRows = hasData ? facultyGeneralRows.filter(u => Number(u.general_approved_total || 0) > 0) : [];
+    const labels = visibleGeneralRows.map(u => u.unit_code || '—');
+    const totals = visibleGeneralRows.map(u => Number(u.general_approved_total || 0));
+    syncChartHeight(generalCanvas, defaultDisplayRows.length);
 
     new Chart(generalCanvas, {
       type: 'bar',
