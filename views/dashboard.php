@@ -17,8 +17,7 @@ $general_unit = $general_unit ?? array();
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Dashboard SPECTRUM</h1>
-    <p>Ringkasan progres pengumpulan evidence tahun <?php echo (int)$year; ?>.</p>
+    <div class="sp-page-title">Dashboard SPECTRUM</div>
   </div>
 </div>
 
@@ -31,24 +30,22 @@ $general_unit = $general_unit ?? array();
     <div class="sp-box sp-dashboard-stat">
       <div class="sp-dashboard-stat-label">Jumlah data dikonfirmasi</div>
       <div class="sp-dashboard-stat-value"><?php echo (int)$overview['confirmed_total']; ?></div>
-      <div class="sp-help">Termasuk APPROVED + NO Data (per metrik mandatory unik per fungsi).</div>
     </div>
     <div class="sp-box sp-dashboard-stat">
       <div class="sp-dashboard-stat-label">Proses Pengumpulan data</div>
       <div class="sp-dashboard-stat-value"><?php echo (int)$overview['percent']; ?>%</div>
-      <div class="sp-help">Jumlah data dikonfirmasi / Jumlah data yang diminta.</div>
     </div>
     <div class="sp-box sp-dashboard-stat">
       <div class="sp-dashboard-stat-label">Jumlah data belum dikonfirmasi</div>
       <div class="sp-dashboard-stat-value"><?php echo (int)$overview['submitted_total']; ?></div>
-      <div class="sp-help">Mandatory yang statusnya masih SUBMITTED.</div>
     </div>
   </div>
 
   <div class="sp-dashboard-two-col" style="margin-top:14px;">
     <div class="sp-box">
-      <h3 style="margin:0 0 6px 0;">Progress per Unit</h3>
-      <div class="sp-help">Sumbu Y: Fungsi, sumbu X: persentase konfirmasi mandatory.</div>
+      <div class="sp-chart-head">
+        <h3 style="margin:0 0 6px 0;">Progress per Unit</h3>
+      </div>
       <label style="font-size:12px;color:#334155;display:flex;align-items:center;gap:6px;">
         Filter Fungsi
         <select id="sp-unit-filter" class="sp-select" style="width:auto;min-width:180px;padding:4px 8px;">
@@ -61,8 +58,10 @@ $general_unit = $general_unit ?? array();
     </div>
 
     <div class="sp-box">
-      <h3 style="margin:0 0 6px 0;">Grafik Kontribusi Unit</h3>
-      <div class="sp-help">Sumbu Y: Fungsi, sumbu X: jumlah evidence GENERAL yang APPROVED.</div>
+      <div class="sp-chart-head">
+        <h3 style="margin:0 0 6px 0;">Kontribusi Unit</h3>
+        <div class="sp-help sp-help-placeholder">&nbsp;</div>
+      </div>
       <div class="sp-chart-wrap" style="margin-top:10px;">
         <canvas id="sp-unit-general-chart"></canvas>
       </div>
@@ -71,7 +70,9 @@ $general_unit = $general_unit ?? array();
 
   <div class="sp-box" style="margin-top:14px;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-      <h3 style="margin:0;">SDG Evidence Status</h3>
+      <div class="sp-chart-head" style="min-height:0;">
+        <h3 style="margin:0;">SDG Evidence Status</h3>
+      </div>
       <label style="font-size:12px;color:#334155;display:flex;align-items:center;gap:6px;">
         Filter Status
         <select id="sp-sdg-status-filter" class="sp-select" style="width:auto;min-width:140px;padding:4px 8px;">
@@ -168,13 +169,80 @@ $general_unit = $general_unit ?? array();
     }
   }
 
+  const FACULTY_MAP = {
+    FKD: ['IR', 'CO'],
+    FPI: ['EV', 'CV', 'MSU'],
+    FTI: ['CE', 'EE', 'ME', 'LG'],
+    FTEP: ['GP', 'GL', 'PE'],
+    FSIK: ['CS', 'CH', 'AT'],
+    FEB: ['MN', 'EC', 'MMN']
+  };
+
+  const DIRECTORATE_CODES = ['DIRDIK','DIRMAWA','DPPM','DIK','DKI','DKA','DPPA','DSMTI','SPI','SPM','HUKUM','RPMB'];
+  const PRODI_CODES = Object.values(FACULTY_MAP).flat();
+
+  function buildFacultyRows(rows){
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    const out = [];
+    Object.entries(FACULTY_MAP).forEach(([faculty, codes]) => {
+      const members = list.filter(r => codes.includes(String(r.unit_code || '').toUpperCase()));
+      const requested = members.reduce((n, r) => n + Number(r.requested_total || 0), 0);
+      const approved = members.reduce((n, r) => n + Number(r.approved_total || 0), 0);
+      const noData = members.reduce((n, r) => n + Number(r.no_data_total || 0), 0);
+      out.push({
+        unit_code: faculty,
+        requested_total: requested,
+        approved_total: approved,
+        no_data_total: noData,
+        approved_percent: requested > 0 ? (approved / requested) * 100 : 0,
+        no_data_percent: requested > 0 ? (noData / requested) * 100 : 0
+      });
+    });
+    return out;
+  }
+
+  function buildFacultyGeneralRows(rows){
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    const out = [];
+    Object.entries(FACULTY_MAP).forEach(([faculty, codes]) => {
+      const members = list.filter(r => codes.includes(String(r.unit_code || '').toUpperCase()));
+      const total = members.reduce((n, r) => n + Number(r.general_approved_total || 0), 0);
+      out.push({ unit_code: faculty, general_approved_total: total });
+    });
+    return out;
+  }
+
+  function normalizeUnitRows(rows){
+    return Array.isArray(rows)
+      ? rows.map(r => ({ ...r, unit_code: String(r.unit_code || '').toUpperCase() }))
+      : [];
+  }
+
   const unitCanvas = document.getElementById('sp-unit-progress-chart');
   const unitFilter = document.getElementById('sp-unit-filter');
   let unitChart = null;
 
+  const normalizedUnitRows = normalizeUnitRows(unitRows);
+  const facultyRows = buildFacultyRows(normalizedUnitRows);
+  const prodiRows = normalizedUnitRows.filter(r => PRODI_CODES.includes(String(r.unit_code || '').toUpperCase()));
+  const directorateRows = normalizedUnitRows.filter(r => DIRECTORATE_CODES.includes(String(r.unit_code || '').toUpperCase()));
+  const defaultDisplayRows = facultyRows.concat(directorateRows);
+  const allDropdownRows = defaultDisplayRows.concat(prodiRows);
+
   function getFilteredUnits(){
-    if (!unitFilter || unitFilter.value === 'ALL') return unitRows;
-    return unitRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
+    if (!unitFilter || unitFilter.value === 'ALL') return defaultDisplayRows;
+    return allDropdownRows.filter(u => String(u.unit_code || '') === String(unitFilter.value));
+  }
+
+  function syncChartHeight(canvas, rowCount){
+    const chartWrap = canvas ? canvas.closest('.sp-chart-wrap') : null;
+    if (!chartWrap) return;
+    const perRow = 28;
+    const base = 220;
+    const minHeight = 340;
+    const dynamicHeight = Math.max(minHeight, base + (Number(rowCount || 0) * perRow));
+    chartWrap.style.height = dynamicHeight + 'px';
+    chartWrap.style.minHeight = dynamicHeight + 'px';
   }
 
   function renderUnitChart(){
@@ -183,6 +251,8 @@ $general_unit = $general_unit ?? array();
     const labels = rows.map(u => u.unit_code || '—');
     const approvedPct = rows.map(u => Number(u.approved_percent || 0));
     const noDataPct = rows.map(u => Number(u.no_data_percent || 0));
+
+    syncChartHeight(unitCanvas, labels.length);
 
     if (unitChart) unitChart.destroy();
 
@@ -199,7 +269,7 @@ $general_unit = $general_unit ?? array();
             borderWidth: 1
           },
           {
-            label: 'No Data',
+            label: 'Not Available',
             data: noDataPct,
             backgroundColor: '#f97316',
             borderColor: '#ea580c',
@@ -222,7 +292,7 @@ $general_unit = $general_unit ?? array();
                 if (ctx.dataset.label === 'Approved Mandatory') {
                   return `Approved: ${Number(item.approved_percent || 0).toFixed(1)}% (${item.approved_total || 0}/${item.requested_total || 0})`;
                 }
-                return `No Data: ${Number(item.no_data_percent || 0).toFixed(1)}% (${item.no_data_total || 0}/${item.requested_total || 0})`;
+                return `Not Available: ${Number(item.no_data_percent || 0).toFixed(1)}% (${item.no_data_total || 0}/${item.requested_total || 0})`;
               }
             }
           }
@@ -236,13 +306,30 @@ $general_unit = $general_unit ?? array();
   }
 
   if (unitFilter) {
-    const uniqUnits = Array.from(new Set(unitRows.map(u => String(u.unit_code || '')).filter(Boolean)));
-    uniqUnits.forEach(code => {
+    unitFilter.innerHTML = '<option value="ALL">Semua Unit</option>';
+
+    const addGroup = (label, rows) => {
+      const group = document.createElement('optgroup');
+      group.label = label;
+      rows.forEach(row => {
+        const opt = document.createElement('option');
+        opt.value = row.unit_code;
+        opt.textContent = row.unit_code;
+        group.appendChild(opt);
+      });
+      unitFilter.appendChild(group);
+    };
+
+    addGroup('Direktorat/Fungsi', directorateRows);
+    addGroup('Fakultas', facultyRows);
+    addGroup('Prodi', prodiRows);
+
+    /*uniqUnits.forEach(code => {
       const opt = document.createElement('option');
       opt.value = code;
       opt.textContent = code;
       unitFilter.appendChild(opt);
-    });
+    });*/
     unitFilter.addEventListener('change', renderUnitChart);
   }
 
@@ -250,8 +337,12 @@ $general_unit = $general_unit ?? array();
 
   const generalCanvas = document.getElementById('sp-unit-general-chart');
   if (generalCanvas) {
-    const labels = generalRows.map(u => u.unit_code || '—');
-    const totals = generalRows.map(u => Number(u.general_approved_total || 0));
+    const facultyGeneralRows = buildFacultyGeneralRows(generalRows);
+    const hasData = facultyGeneralRows.some(u => Number(u.general_approved_total || 0) > 0);
+    const visibleGeneralRows = hasData ? facultyGeneralRows.filter(u => Number(u.general_approved_total || 0) > 0) : [];
+    const labels = visibleGeneralRows.map(u => u.unit_code || '—');
+    const totals = visibleGeneralRows.map(u => Number(u.general_approved_total || 0));
+    syncChartHeight(generalCanvas, defaultDisplayRows.length);
 
     new Chart(generalCanvas, {
       type: 'bar',
@@ -277,7 +368,14 @@ $general_unit = $general_unit ?? array();
           }
         },
         scales: {
-          x: { beginAtZero: true, title: { display: true, text: 'Jumlah Evidence' }, grid: {display: false} },
+          x: {
+            beginAtZero: true,
+            min: 0,
+            max: hasData ? undefined : 10,
+            ticks: { stepSize: 1, precision: 0 },
+            title: { display: true, text: 'Jumlah Evidence' },
+            grid: {display: false}
+          },
           y: { ticks: { autoSkip: false }, grid: {display: false} }
         }
       }

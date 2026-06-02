@@ -124,4 +124,10 @@ final class FunctionMetricAssignmentRepository {
         AND category = %s
     ", $unit_code, (int)$year, $category));
   }
+
+  public static function distinctUnitCodes() {
+    global $wpdb;
+    $t = self::table();
+    return $wpdb->get_col("SELECT DISTINCT unit_code FROM {$t} WHERE unit_code IS NOT NULL AND unit_code <> '' ORDER BY unit_code ASC");
+  }
 }

@@ -9,10 +9,9 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Evidence Saya</h1>
-    <p>Lihat dan kelola seluruh evidence yang pernah Anda ajukan. Akun: <strong><?php echo esc_html($email); ?></strong></p>
+    <div class="sp-page-title">Evidence Saya</div>
+    <p>Lihat dan kelola seluruh evidence yang pernah Anda ajukan.</p>
   </div>
-  <a href="<?php echo esc_url(Url::page('new')); ?>" class="sp-btn-primary">+ Buat Evidence Baru</a>
 </div>
 
 <section class="sp-card">
@@ -165,17 +164,24 @@ include __DIR__ . '/layout-open.php';
                 <?php if (in_array($r->status, array('DRAFT','REJECTED'), true)): ?>
                   <div class="sp-action-group">
                     <a href="<?php echo esc_url(Url::page('detail', array('evidence_id'=>$r->id,'mode'=>'edit'))); ?>" 
-                       class="sp-action-btn" title="Edit">
-                      <span class="dashicons dashicons-edit"></span>
+                       class="sp-action-btn sp-action-edit" title="Edit" aria-label="Edit evidence">
+                      <svg class="sp-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 5h10.5l-2 2H7v10h10v-6.5l2-2V19H5V5z"></path>
+                        <path d="M14.7 13.3l-3.4.7.7-3.4 7.4-7.4c.5-.5 1.3-.5 1.8 0l1.6 1.6c.5.5.5 1.3 0 1.8l-7.4 7.4z"></path>
+                      </svg>
                     </a>
 
                     <form method="post" class="sp-action-form">
                       <?php wp_nonce_field('delete_evidence_' . $r->id); ?>
                       <input type="hidden" name="action" value="delete_evidence">
                       <input type="hidden" name="evidence_id" value="<?php echo (int)$r->id; ?>">
-                      <button type="submit" class="sp-action-btn"
+                      <button type="submit" class="sp-action-btn sp-action-delete" aria-label="Hapus evidence"
                         onclick="return confirm('Yakin hapus evidence ini?');">
-                        <span class="dashicons dashicons-trash"></span>
+                        <svg class="sp-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M7 8h10l-.8 11.2c-.1 1-1 1.8-2 1.8H9.8c-1 0-1.9-.8-2-1.8L7 8z"></path>
+                          <path d="M9 4h6l1 2h4v2H4V6h4l1-2z"></path>
+                          <path d="M10 11h2v6h-2v-6zm4 0h2v6h-2v-6z"></path>
+                        </svg>
                       </button>
                     </form>
 
