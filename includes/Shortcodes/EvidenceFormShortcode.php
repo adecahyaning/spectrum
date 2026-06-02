@@ -16,9 +16,11 @@ if (!defined('ABSPATH')) exit;
 final class EvidenceFormShortcode {
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login untuk mengisi evidence.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
     Assets::enqueueOnce();
 
     $user_id = Auth::userId();
+    $is_admin = user_can($user_id, 'manage_options');
     $unit_code = Auth::unitCode($user_id);
     $years = array_map('intval', (array)MetricRepository::activeYears());
     $selected_year = isset($_GET['year']) ? (int)$_GET['year'] : 0;
@@ -59,6 +61,32 @@ final class EvidenceFormShortcode {
       $general_metrics[] = $m;
     }
 
+    $admin_unit_mandatory_map = array();
+    if ($is_admin) {
+      foreach ((array)$target_units as $target_unit_code) {
+        foreach ((array)$years as $y) {
+          $key = (string)$target_unit_code . '|' . (int)$y;
+          $target_mandatory = FunctionMetricAssignmentRepository::getAssignedMetricsByUnitAndYear($target_unit_code, (int)$y, 'MANDATORY');
+          $target_no_data_ids = MetricNoDataRepository::getMetricIdsByUnitAndYear($target_unit_code, (int)$y);
+          $target_approved_ids = MetricCoverageRepository::getApprovedMetricIdsByUnitAndYear($target_unit_code, (int)$y);
+
+          $target_approved_lookup = array();
+          foreach ((array)$target_approved_ids as $mid) $target_approved_lookup[(int)$mid] = true;
+          $target_no_lookup = array();
+          foreach ((array)$target_no_data_ids as $mid) $target_no_lookup[(int)$mid] = true;
+
+          $mapped = array();
+          foreach ((array)$target_mandatory as $m) {
+            $id = (int)$m->metric_id;
+            $status = !empty($target_approved_lookup[$id]) ? 'Complete' : (!empty($target_no_lookup[$id]) ? 'No data' : 'Uncompleted');
+            $m->label = $m->metric_code . ' – ' . $m->metric_title . ' [' . $status . ']';
+            $mapped[] = $m;
+          }
+          $admin_unit_mandatory_map[$key] = $mapped;
+        }
+      }
+    }
+
     return View::render('evidence-form', array(
       'active' => 'new',
       'notice' => Notices::get($user_id),
@@ -67,6 +95,9 @@ final class EvidenceFormShortcode {
       'mandatory_metrics' => $formatted_mandatory,
       'general_metrics' => $general_metrics,
       'no_data_ids' => array_map('intval', (array)$no_data_ids),
+      'is_admin' => $is_admin,
+      'target_units' => FunctionMetricAssignmentRepository::distinctUnitCodes(),
+      'admin_unit_mandatory_map' => $admin_unit_mandatory_map,
     ));
   }
 }

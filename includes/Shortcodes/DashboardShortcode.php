@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) exit;
 final class DashboardShortcode {
   public static function render() {
     if (!Auth::isLoggedIn()) return '<p>Silakan login.</p>';
+    if (!Auth::isUnitKnown()) return '<p>Akun Anda belum memiliki fungsi/unit. Hubungi admin.</p>';
 
     Assets::enqueueOnce();
 

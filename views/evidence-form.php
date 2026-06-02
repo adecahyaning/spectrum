@@ -9,9 +9,8 @@ include __DIR__ . '/layout-open.php';
 
 <div class="sp-page-header">
   <div class="sp-page-title-block">
-    <h1>Buat Evidence Baru</h1>
+    <div class="sp-page-title">Buat Evidence Baru</div>
   </div>
-  <a class="sp-btn-secondary" href="<?php echo esc_url(Url::page('my')); ?>">← Kembali</a>
 </div>
 
 <section class="sp-card">
@@ -47,10 +46,25 @@ include __DIR__ . '/layout-open.php';
     <div class="sp-form-row">
       <label class="sp-label">Kategori *</label>
       <div style="display:flex;gap:18px;align-items:center;">
-        <label><input type="radio" name="metric_mode" value="MANDATORY" required checked> Mandatory</label>
+        <label><input type="radio" name="metric_mode" value="MANDATORY" required checked <?php echo !empty($is_admin) ? 'readonly' : ''; ?>> Mandatory</label>
+        <?php if (empty($is_admin)): ?>
         <label><input type="radio" name="metric_mode" value="GENERAL" required> General</label>
+        <?php endif; ?>
       </div>
     </div>
+
+    <?php if (!empty($is_admin)): ?>
+    <div class="sp-form-row">
+      <label class="sp-label">Target Fungsi/Unit (Admin) *</label>
+      <select name="target_unit_code" id="target_unit_code" class="sp-select">
+        <option value="">-- Pilih Fungsi/Unit --</option>
+        <?php foreach ((array)$target_units as $u): ?>
+          <option value="<?php echo esc_attr($u); ?>"><?php echo esc_html($u); ?></option>
+        <?php endforeach; ?>
+      </select>
+      <div class="sp-help">Jika diisi admin dan submit via tombol auto-approve, evidence akan masuk sebagai milik unit target.</div>
+    </div>
+    <?php endif; ?>
 
     <div class="sp-form-row" id="sp-sdg-row" style="display:none;">
       <label class="sp-label">Pilih SDG (untuk General) *</label>
@@ -122,6 +136,9 @@ include __DIR__ . '/layout-open.php';
     <div class="sp-form-actions">
       <button type="submit" name="spectrum_action" value="draft" class="sp-btn-secondary">Simpan Draft</button>
       <button type="submit" name="spectrum_action" value="submit" class="sp-btn-primary">Submit</button>
+      <?php if (!empty($is_admin)): ?>
+      <button type="submit" name="spectrum_action" value="admin_submit_approved" class="sp-btn-primary">Submit Admin (Auto-Approve)</button>
+      <?php endif; ?>
     </div>
   </form>
 </section>
@@ -129,6 +146,7 @@ include __DIR__ . '/layout-open.php';
 <script>
 (function(){
   const mandatory = <?php echo wp_json_encode(array_values((array)$mandatory_metrics)); ?>;
+  const adminMandatoryMap = <?php echo wp_json_encode((object)($admin_unit_mandatory_map ?? array())); ?>;
   const general = <?php echo wp_json_encode(array_values((array)$general_metrics)); ?>;
   const noDataIds = new Set(<?php echo wp_json_encode(array_values((array)$no_data_ids)); ?>.map(Number));
 
@@ -154,6 +172,8 @@ include __DIR__ . '/layout-open.php';
   const srcLinkWrap = document.querySelector('.sp-source-link');
   const srcFileWrap = document.querySelector('.sp-source-file');
   const sourceRadios = document.querySelectorAll('input[name="source_type"]');
+  const isAdmin = <?php echo !empty($is_admin) ? 'true' : 'false'; ?>;
+  const targetUnitSelect = document.getElementById('target_unit_code');
 
   function getMode(){
     const checked = document.querySelector('input[name="metric_mode"]:checked');
@@ -163,12 +183,26 @@ include __DIR__ . '/layout-open.php';
   function rebuildMetric() {
     const mode = getMode();
     metricSelect.innerHTML = '<option value="">-- Pilih Indikator --</option>';
+    metricSelect.disabled = false;
     noWrap.style.display = (mode === 'MANDATORY') ? '' : 'none';
     if (mode !== 'MANDATORY') noData.checked = false;
 
-    const items = mode === 'MANDATORY'
-      ? mandatory
-      : general.filter(m => String(m.sdg_number) === String(sdgSelect.value || ''));
+    let items = [];
+    if (isAdmin) {
+      const selectedYear = yearSelect ? String(yearSelect.value || '') : '';
+      const selectedUnit = targetUnitSelect ? String(targetUnitSelect.value || '') : '';
+      if (!selectedUnit) {
+        metricSelect.disabled = true;
+        onMetricChange();
+        return;
+      }
+      const key = `${selectedUnit}|${selectedYear}`;
+      items = Array.isArray(adminMandatoryMap[key]) ? adminMandatoryMap[key] : [];
+    } else {
+      items = mode === 'MANDATORY'
+        ? mandatory
+        : general.filter(m => String(m.sdg_number) === String(sdgSelect.value || ''));
+    }
 
     items.forEach(item => {
       const id = Number(item.metric_id || item.id);
@@ -223,14 +257,35 @@ include __DIR__ . '/layout-open.php';
       syncRequired();
       return;
     }
+    const normalizeMultiline = (value) => String(value || '')
+      .replace(/<br\s*\/?\s*>/gi, '\n')
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\/n/g, '\n')
+      .replace(/\r\n?/g, '\n')
+      .replace(/\s+•\s+/g, '\n• ')
+      .trim();
+    const escapeHtml = (value) => String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
     metricQuestion.textContent = selectedOpt.dataset.question || '-';
-    metricPoints.textContent = selectedOpt.dataset.points || '-';
-    metricNote.textContent = selectedOpt.dataset.note || '-';
+    const pointsText = normalizeMultiline(selectedOpt.dataset.points);
+    const noteText = normalizeMultiline(selectedOpt.dataset.note);
+    metricPoints.innerHTML = pointsText ? escapeHtml(pointsText).replace(/\n/g, '<br>') : '-';
+    metricNote.innerHTML = noteText ? escapeHtml(noteText).replace(/\n/g, '<br>') : '-';
     metricInfo.style.display = '';
     syncRequired();
   }
 
   modeEls.forEach(el => el.addEventListener('change', function(){
+    if (isAdmin) {
+      const mandatoryRadio = document.querySelector('input[name="metric_mode"][value="MANDATORY"]');
+      if (mandatoryRadio) mandatoryRadio.checked = true;
+    }
     sdgRow.style.display = (getMode() === 'GENERAL') ? '' : 'none';
     rebuildMetric();
   }));
@@ -242,6 +297,20 @@ include __DIR__ . '/layout-open.php';
 
   form.addEventListener('submit', function(e){
     const mode = getMode();
+    const submitter = e.submitter;
+    const action = submitter ? submitter.value : '';
+    if (action === 'admin_submit_approved') {
+      if (mode !== 'MANDATORY') {
+        alert('Admin auto-approve hanya untuk kategori Mandatory.');
+        e.preventDefault();
+        return;
+      }
+      if (isAdmin && (!targetUnitSelect || !targetUnitSelect.value)) {
+        alert('Target fungsi/unit wajib dipilih.');
+        e.preventDefault();
+        return;
+      }
+    }
     if (mode === 'GENERAL' && !sdgSelect.value) {
       alert('Pilih SDG dulu untuk kategori General.');
       e.preventDefault();
@@ -256,10 +325,21 @@ include __DIR__ . '/layout-open.php';
 
   if (yearSelect) {
     yearSelect.addEventListener('change', function(){
+      if (isAdmin) {
+        rebuildMetric();
+        return;
+      }
       const url = new URL(window.location.href);
       url.searchParams.set('year', this.value);
       window.location.href = url.toString();
     });
+  }
+
+  if (isAdmin && targetUnitSelect) {
+    targetUnitSelect.addEventListener('change', rebuildMetric);
+    const generalRadio = document.querySelector('input[name="metric_mode"][value="GENERAL"]');
+    if (generalRadio) generalRadio.checked = false;
+    sdgRow.style.display = 'none';
   }
 })();
 </script>
