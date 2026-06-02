@@ -210,9 +210,9 @@ table.sp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760p
 
 .sp-action-group {
   display: flex;
-  align-items: left;
-  justify-content: left;
-  gap: 2px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
 }
 .sp-table th {
 background:#f1f5f9;
@@ -233,21 +233,45 @@ font-weight:600;
 .sp-action-btn:visited,
 .sp-action-btn:hover,
 .sp-action-btn:active {
-  background: transparent !important;
-  border: none !important;
+  background: #f8fafc !important;
+  border: 1px solid #dbe4de !important;
   box-shadow: none !important;
-  padding: 4px;
+  padding: 0;
   cursor: pointer;
-  color: #31572C !important;
+  color: #4f9f62 !important;
   text-decoration: none !important;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
 }
 
-.sp-action-btn .dashicons {
-  color: #31572C !important;
-  font-size: 18px;
-  line-height: 1;
+.sp-action-btn:hover {
+  background: #ecfdf3 !important;
+  border-color: #86efac !important;
+  transform: translateY(-1px);
+}
+
+.sp-action-delete,
+.sp-action-delete:hover,
+.sp-action-delete:active {
+  color: #b65d66 !important;
+  border-color: #f1d4d8 !important;
+}
+
+.sp-action-delete:hover {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+
+.sp-action-icon {
+  width: 19px;
+  height: 19px;
+  display: block;
+  fill: currentColor;
 }
 
 .sp-dashboard-cards{
